@@ -6,6 +6,9 @@ import numpy as np
 import torch
 import os
 import time
+import boto3
+
+
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 inpaint_model_list = [
     "stabilityai/stable-diffusion-2-inpainting",
@@ -18,15 +21,15 @@ default_prompt = "A psychedelic jungle with trees that have glowing, fractal-lik
 default_negative_prompt = "frames, borderline, text, charachter, duplicate, error, out of frame, watermark, low quality, ugly, deformed, blur"
 
 
-def zoom(
-    model_id,
-    prompts_array,
-    negative_prompt,
-    num_outpainting_steps,
-    guidance_scale,
-    num_inference_steps,
-    custom_init_image
-):
+def zoom(request):
+    model_id = request.get("model_id")
+    prompts_array = request.get("prompts_array")
+    negative_prompt = request.get("negative_prompt")
+    num_outpainting_steps = request.get("num_outpainting_steps")
+    guidance_scale = request.get("guidance_scale")
+    num_inference_steps = request.get("num_inference_steps")
+    custom_init_image = request.get("custom_init_image")
+
     prompts = {}
     for x in prompts_array:
         try:
@@ -208,3 +211,26 @@ def zoom_app():
             ],
             outputs=output_image,
         )
+
+        file_name = "infinite_zoom_" + str(time.time())
+        save_path = f"/tmp/{file_name}.mp4"
+        
+        if save_path:
+            s3_client = boto3.client('s3')
+            bucket_name = "diffusion12"
+            s3_file_name = f"infinite_zoom_{int(time.time())}.mp4"
+
+
+            s3_client.upload_file(save_path, bucket_name, s3_file_name)
+
+            s3_url = f"https://{bucket_name}.s3.amazonaws.com/{s3_file_name}"
+
+            return {"s3_url": s3_url} 
+
+
+
+
+        
+
+
+

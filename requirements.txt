@@ -1,9 +1,10 @@
 Pillow==8.4.0
 diffusers==0.14.0
-torch==1.13.1
+torch
 numpy
 gradio==3.23.0
 transformers
 xformers
 accelerate
 imageio
+boto3
