@@ -1,15 +1,17 @@
 from helpers import *
 from diffusers import StableDiffusionInpaintPipeline, EulerAncestralDiscreteScheduler
 from PIL import Image
-import gradio as gr
 import numpy as np
 import torch
 import os
 import time
-import boto3
-
-
+import boto3 
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
+access_key = os.environ.get('AWS_ACCESS_KEY_ID')
+secret_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
+region = os.environ.get('AWS_DEFAULT_REGION')
+
 inpaint_model_list = [
     "stabilityai/stable-diffusion-2-inpainting",
     "runwayml/stable-diffusion-inpainting",
@@ -21,15 +23,15 @@ default_prompt = "A psychedelic jungle with trees that have glowing, fractal-lik
 default_negative_prompt = "frames, borderline, text, charachter, duplicate, error, out of frame, watermark, low quality, ugly, deformed, blur"
 
 
-def zoom(request):
-    model_id = request.get("model_id")
-    prompts_array = request.get("prompts_array")
-    negative_prompt = request.get("negative_prompt")
-    num_outpainting_steps = request.get("num_outpainting_steps")
-    guidance_scale = request.get("guidance_scale")
-    num_inference_steps = request.get("num_inference_steps")
-    custom_init_image = request.get("custom_init_image")
-
+def zoom(
+    model_id,
+    prompts_array,
+    negative_prompt,
+    num_outpainting_steps,
+    guidance_scale,
+    num_inference_steps,
+    custom_init_image
+):
     prompts = {}
     for x in prompts_array:
         try:
@@ -138,99 +140,21 @@ def zoom(request):
 
     write_video(save_path, all_frames, fps, False,
                 start_frame_dupe_amount, last_frame_dupe_amount)
-    return save_path
+    
 
-
-def zoom_app():
-    with gr.Blocks():
-        with gr.Row():
-            with gr.Column():
-
-                outpaint_prompts = gr.Dataframe(
-                    type="array",
-                    headers=["outpaint steps", "prompt"],
-                    datatype=["number", "str"],
-                    row_count=1,
-                    col_count=(2, "fixed"),
-                    value=[[0, default_prompt]],
-                    wrap=True
-                )
-
-                outpaint_negative_prompt = gr.Textbox(
-                    lines=1,
-                    value=default_negative_prompt,
-                    label='Negative Prompt'
-                )
-
-                outpaint_steps = gr.Slider(
-                    minimum=5,
-                    maximum=25,
-                    step=1,
-                    value=12,
-                    label='Total Outpaint Steps'
-                )
-                with gr.Accordion("Advanced Options", open=False):
-                    model_id = gr.Dropdown(
-                        choices=inpaint_model_list,
-                        value=inpaint_model_list[0],
-                        label='Pre-trained Model ID'
-                    )
-
-                    guidance_scale = gr.Slider(
-                        minimum=0.1,
-                        maximum=15,
-                        step=0.1,
-                        value=7,
-                        label='Guidance Scale'
-                    )
-
-                    sampling_step = gr.Slider(
-                        minimum=1,
-                        maximum=100,
-                        step=1,
-                        value=50,
-                        label='Sampling Steps for each outpaint'
-                    )
-                    init_image = gr.Image(type="pil")
-                generate_btn = gr.Button(value='Generate video')
-
-            with gr.Column():
-                output_image = gr.Video(label='Output', format="mp4").style(
-                    width=512, height=512)
-
-        generate_btn.click(
-            fn=zoom,
-            inputs=[
-                model_id,
-                outpaint_prompts,
-                outpaint_negative_prompt,
-                outpaint_steps,
-                guidance_scale,
-                sampling_step,
-                init_image
-            ],
-            outputs=output_image,
-        )
-
-        file_name = "infinite_zoom_" + str(time.time())
-        save_path = f"/tmp/{file_name}.mp4"
-        
-        if save_path:
-            s3_client = boto3.client('s3')
-            bucket_name = "diffusion12"
-            s3_file_name = f"infinite_zoom_{int(time.time())}.mp4"
-
-
-            s3_client.upload_file(save_path, bucket_name, s3_file_name)
-
-            s3_url = f"https://{bucket_name}.s3.amazonaws.com/{s3_file_name}"
-
-            return {"s3_url": s3_url} 
-
-
-
-
-        
-
-
+    s3_client = boto3.client(
+        's3',
+        aws_access_key_id=access_key,
+        aws_secret_access_key=secret_key,
+        region_name=region
+    )
+    
+    bucket_name = "pius-upwork-bucket"
+    
+    s3_client.upload_file(save_path, bucket_name, video_file_name )
+    s3_url = f"https://{bucket_name}.s3.amazonaws.com/{video_file_name}"
+    
+    
+    
+    return s3_url
 
