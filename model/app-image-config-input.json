@@ -1,0 +1,17 @@
+{
+    "AppImageConfigName": "infinite",
+    "KernelGatewayImageConfig": {
+      "KernelSpecs": [
+        {
+          "Name": "python3",
+          "DisplayName": "Python 3"
+        }
+      ],
+      "FileSystemConfig": {
+        "MountPath": "/root/data",
+        "DefaultUid": 1000,
+        "DefaultGid": 1000
+      }
+    }
+  }
+  

@@ -3,8 +3,8 @@ from zoom import zoom
 
 app = Flask(__name__)
 
-@app.route('/generate-video', methods=['POST'])
-def generate_video():
+@app.route('/invocations', methods=['POST'])
+def invoke():
     data = request.json
     
     # Extract required parameters from the POST request
